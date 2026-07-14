@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { formatPrice, formatWhen } from "@/lib/cart";
 import type {
@@ -10,6 +10,7 @@ import type {
   Order,
   OrderStatus,
 } from "@/lib/types";
+import { ReceiptBadges } from "./ReceiptBadges";
 
 const STATUS_KO: Record<GroupStatus, string> = {
   open: "모집 중",
@@ -34,6 +35,14 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
     initial.find((g) => g.status === "submitted")?.id ?? null,
   );
   const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGroups(initial);
+    setOpenId((prev) => {
+      if (prev && initial.some((g) => g.id === prev)) return prev;
+      return initial.find((g) => g.status === "submitted")?.id ?? null;
+    });
+  }, [initial]);
 
   async function setStatus(id: string, status: GroupStatus) {
     setBusy(id);
@@ -82,7 +91,7 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
     return (
       <div className="card px-6 py-14 text-center">
         <p className="mb-2 text-3xl">🏢</p>
-        <p className="font-semibold">합배송 모임이 없습니다</p>
+        <p className="font-semibold">이 날짜의 합배송이 없습니다</p>
       </div>
     );
   }
@@ -177,6 +186,12 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                               </li>
                             ))}
                           </ul>
+                          <ReceiptBadges
+                            wantPoint={o.want_point_earn}
+                            wantReceipt={o.want_cash_receipt}
+                            receiptPhone={o.cash_receipt_phone}
+                            compact
+                          />
                         </li>
                       );
                     })}

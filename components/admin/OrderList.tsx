@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/cart";
 import type { Order, OrderStatus } from "@/lib/types";
+import { ReceiptBadges } from "./ReceiptBadges";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   draft: "임시",
@@ -31,6 +32,10 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
   const [orders, setOrders] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
 
+  useEffect(() => {
+    setOrders(initial);
+  }, [initial]);
+
   async function setStatus(id: string, status: OrderStatus) {
     setBusy(id);
     const supabase = createBrowserSupabase();
@@ -47,8 +52,8 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
   if (orders.length === 0) {
     return (
       <div className="card px-6 py-14 text-center">
-        <p className="text-3xl mb-2">📭</p>
-        <p className="font-semibold">주문이 없습니다</p>
+        <p className="mb-2 text-3xl">📭</p>
+        <p className="font-semibold">이 날짜의 주문이 없습니다</p>
       </div>
     );
   }
@@ -63,14 +68,14 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
           ) ?? 0;
 
         return (
-          <li key={order.id} className="card p-4 space-y-3">
+          <li key={order.id} className="card space-y-3 p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-lg font-bold tracking-wide">
                   #{order.order_number}
                 </p>
                 <p className="text-sm text-ink-muted">
-                  {formatWhen(order.created_at)}
+                  접수 {formatWhen(order.created_at)}
                 </p>
               </div>
               <span
@@ -86,7 +91,7 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
               </span>
             </div>
 
-            <div className="text-sm space-y-1">
+            <div className="space-y-1.5 text-sm">
               <p>
                 <span className="font-semibold">{order.customer_name}</span>
                 <span className="text-ink-muted"> · {order.customer_phone}</span>
@@ -99,16 +104,14 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
               {order.fulfillment_type === "delivery" && order.delivery_address && (
                 <p className="text-ink-muted">📍 {order.delivery_address}</p>
               )}
-              <p className="text-ink-muted">
-                {order.want_point_earn ? "포인트 적립" : "포인트 없음"}
-                {" · "}
-                {order.want_cash_receipt
-                  ? `현금영수증 ${order.cash_receipt_phone || ""}`
-                  : "영수증 없음"}
-              </p>
+              <ReceiptBadges
+                wantPoint={order.want_point_earn}
+                wantReceipt={order.want_cash_receipt}
+                receiptPhone={order.cash_receipt_phone}
+              />
             </div>
 
-            <ul className="rounded-xl bg-cream px-3 py-2 text-sm space-y-1">
+            <ul className="space-y-1 rounded-xl bg-cream px-3 py-2 text-sm">
               {order.order_items?.map((item) => (
                 <li key={item.id} className="flex justify-between gap-2">
                   <span>
@@ -129,7 +132,7 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="btn btn-primary flex-1 text-sm py-2.5"
+                  className="btn btn-primary flex-1 py-2.5 text-sm"
                   disabled={busy === order.id}
                   onClick={() => setStatus(order.id, "done")}
                 >
@@ -137,7 +140,7 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-danger flex-1 text-sm py-2.5"
+                  className="btn btn-danger flex-1 py-2.5 text-sm"
                   disabled={busy === order.id}
                   onClick={() => setStatus(order.id, "cancelled")}
                 >

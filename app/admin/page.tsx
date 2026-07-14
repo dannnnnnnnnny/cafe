@@ -20,12 +20,12 @@ export default async function AdminOrdersPage() {
       .from("orders")
       .select("*, order_items(*)")
       .order("created_at", { ascending: false })
-      .limit(80),
+      .limit(200),
     supabase
       .from("delivery_groups")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(40),
+      .limit(100),
   ]);
 
   if (ordersRes.error) {
