@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/cart";
 import type { Order, OrderStatus } from "@/lib/types";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
+  draft: "임시",
   pending: "대기",
   done: "완료",
   cancelled: "취소",
@@ -72,7 +73,15 @@ export function OrderList({ orders: initial }: { orders: Order[] }) {
                   {formatWhen(order.created_at)}
                 </p>
               </div>
-              <span className={`badge badge-${order.status}`}>
+              <span
+                className={`badge ${
+                  order.status === "done"
+                    ? "badge-done"
+                    : order.status === "cancelled"
+                      ? "badge-cancelled"
+                      : "badge-pending"
+                }`}
+              >
                 {STATUS_LABEL[order.status]}
               </span>
             </div>

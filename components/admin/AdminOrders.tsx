@@ -13,9 +13,8 @@ export function AdminOrders({
   groups: DeliveryGroup[];
 }) {
   const [tab, setTab] = useState<"group" | "solo">("group");
-  const pendingGroups = groups.filter(
-    (g) => g.status === "open" || g.status === "closed",
-  ).length;
+  const pendingGroups = groups.filter((g) => g.status === "submitted").length;
+  const collectingGroups = groups.filter((g) => g.status === "open").length;
   const pendingSolo = soloOrders.filter((o) => o.status === "pending").length;
 
   return (
@@ -24,7 +23,10 @@ export function AdminOrders({
         <div>
           <h2 className="text-xl font-bold">주문</h2>
           <p className="text-sm text-ink-muted">
-            합배송 진행 {pendingGroups} · 개인 대기 {pendingSolo}
+            합배송 접수 {pendingGroups}
+            {collectingGroups > 0 ? ` · 모집 중 ${collectingGroups}` : ""}
+            {" · "}
+            개인 대기 {pendingSolo}
           </p>
         </div>
       </div>

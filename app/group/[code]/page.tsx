@@ -15,8 +15,9 @@ type Participant = {
 };
 
 const STATUS_KO: Record<GroupStatus, string> = {
-  open: "모집 중",
+  open: "메뉴 모집 중",
   closed: "마감",
+  submitted: "어드민 전송됨",
   done: "완료",
   cancelled: "취소",
 };
@@ -29,6 +30,7 @@ export default function GroupPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/groups/${code}`);
@@ -45,7 +47,6 @@ export default function GroupPage() {
     load();
   }, [load]);
 
-  // 모임 페이지 들어오면 합배송 코드 자동 연결 (모집 중일 때)
   useEffect(() => {
     if (group?.status === "open" && code) {
       setGroupCode(code);
@@ -67,11 +68,32 @@ export default function GroupPage() {
     setGroupCode(code);
   }
 
-  function goCheckout() {
-    setGroupCode(code);
+  async function submitToAdmin() {
+    if (
+      !confirm(
+        `참가자 ${participants.length}명의 메뉴를 마감하고\n어드민(매장)에 합배송 주문을 보낼까요?\n\n보낸 뒤에는 추가 참여가 불가합니다.`,
+      )
+    ) {
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/groups/${code}/submit`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "전송 실패");
+      await load();
+      alert(
+        `어드민에 합배송 주문을 보냈습니다.\n참가자 ${data.participantCount}명`,
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "전송 실패");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  if (error) {
+  if (error && !group) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <p className="text-3xl mb-3">😕</p>
@@ -94,6 +116,7 @@ export default function GroupPage() {
   const open = group.status === "open";
   const grandTotal = participants.reduce((s, p) => s + p.total, 0);
   const hasCart = totalCount > 0;
+  const canSubmit = open && participants.length > 0;
 
   return (
     <div className="mx-auto min-h-full max-w-lg px-4 pb-28">
@@ -112,14 +135,35 @@ export default function GroupPage() {
           className={`badge ${
             group.status === "open"
               ? "badge-pending"
-              : group.status === "done"
-                ? "badge-done"
-                : "badge-cancelled"
+              : group.status === "submitted"
+                ? "badge-pending"
+                : group.status === "done"
+                  ? "badge-done"
+                  : "badge-cancelled"
           }`}
         >
-          {STATUS_KO[group.status]}
+          {STATUS_KO[group.status] ?? group.status}
         </span>
       </header>
+
+      {/* 단계 안내 */}
+      <section className="mb-4 rounded-2xl bg-cream-dark/80 px-4 py-3 text-xs leading-relaxed text-ink-muted">
+        {open ? (
+          <>
+            <strong className="text-ink">① 메뉴 모집</strong> — 각자 메뉴 등록
+            (아직 매장 미전달)
+            <br />
+            <strong className="text-ink">② 합배송 주문 보내기</strong> — 모집
+            끝나면 아래 버튼으로 어드민에 전송
+          </>
+        ) : group.status === "submitted" ? (
+          <>어드민에 주문이 전달되었습니다. 매장에서 준비 중이에요.</>
+        ) : group.status === "done" ? (
+          <>합배송이 완료되었습니다.</>
+        ) : (
+          <>이 합배송은 종료되었습니다.</>
+        )}
+      </section>
 
       <section className="card space-y-3 p-4">
         <div className="flex items-center justify-between">
@@ -129,9 +173,15 @@ export default function GroupPage() {
               {group.code}
             </p>
           </div>
-          <button type="button" className="btn btn-ghost text-sm py-2" onClick={copyLink}>
-            {copied ? "복사됨 ✓" : "링크 복사"}
-          </button>
+          {open && (
+            <button
+              type="button"
+              className="btn btn-ghost text-sm py-2"
+              onClick={copyLink}
+            >
+              {copied ? "복사됨 ✓" : "링크 복사"}
+            </button>
+          )}
         </div>
         <dl className="space-y-2 text-sm">
           <div>
@@ -154,19 +204,31 @@ export default function GroupPage() {
 
       <section className="mt-4 card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold">참가자 {participants.length}명</h2>
+          <h2 className="font-bold">
+            등록 {participants.length}명
+            {open && (
+              <span className="ml-2 text-xs font-normal text-ink-muted">
+                (모집 중)
+              </span>
+            )}
+          </h2>
           <span className="text-sm font-bold text-coffee">
             {formatPrice(grandTotal)}
           </span>
         </div>
         {participants.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-muted">
-            아직 참여한 주문이 없어요. 첫 번째로 담아 보세요!
+            아직 등록된 메뉴가 없어요.
+            <br />
+            메뉴를 담고 「내 메뉴 등록」을 해주세요.
           </p>
         ) : (
           <ul className="divide-y divide-cream-dark">
             {participants.map((p) => (
-              <li key={p.orderNumber} className="flex justify-between py-2.5 text-sm">
+              <li
+                key={p.orderNumber}
+                className="flex justify-between py-2.5 text-sm"
+              >
                 <span>
                   <span className="font-semibold">{p.customerName}</span>
                   <span className="text-ink-muted">
@@ -183,55 +245,84 @@ export default function GroupPage() {
         )}
       </section>
 
-      {/* 내 장바구니 미리보기 */}
       {open && hasCart && (
         <section className="mt-4 rounded-2xl border-2 border-coffee/20 bg-foam p-4">
-          <p className="text-xs font-bold tracking-wide text-coffee">내 장바구니</p>
+          <p className="text-xs font-bold tracking-wide text-coffee">
+            내 장바구니 (아직 미등록)
+          </p>
           <p className="mt-1 text-sm text-ink-muted">
-            {totalCount}개 · {formatPrice(totalPrice)} 담겨 있어요
+            {totalCount}개 · {formatPrice(totalPrice)} — 아래에서 등록하세요
           </p>
         </section>
       )}
 
       <div className="mt-6 space-y-3">
-        {!open ? (
+        {/* ① 개인 메뉴 등록 */}
+        {open && (
+          <>
+            {!ready ? (
+              <p className="text-center text-sm text-ink-muted">
+                장바구니 확인 중…
+              </p>
+            ) : hasCart ? (
+              <>
+                <Link
+                  href="/checkout"
+                  onClick={joinAndShop}
+                  className="btn btn-primary flex w-full justify-between py-4 text-base"
+                >
+                  <span>내 메뉴 등록 ({totalCount}개)</span>
+                  <span className="tabular-nums">{formatPrice(totalPrice)}</span>
+                </Link>
+                <Link
+                  href="/"
+                  onClick={joinAndShop}
+                  className="btn btn-ghost flex w-full"
+                >
+                  메뉴 더 담기
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/"
+                  onClick={joinAndShop}
+                  className="btn btn-ghost flex w-full py-3.5"
+                >
+                  메뉴 담으러 가기
+                </Link>
+              </>
+            )}
+
+            {/* ② 어드민 전송 — 모집과 별개 */}
+            <div className="rounded-2xl border border-cream-dark bg-foam p-4 space-y-3">
+              <p className="text-sm font-bold text-ink">주최자 · 합배송 확정</p>
+              <p className="text-xs leading-relaxed text-ink-muted">
+                동료 메뉴 등록이 끝나면, 이 버튼으로 매장(어드민)에 한 번에
+                전달합니다. 모집 중에는 어드민에 주문이 가지 않습니다.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary w-full py-4"
+                disabled={!canSubmit || submitting}
+                onClick={submitToAdmin}
+              >
+                {submitting
+                  ? "전송 중…"
+                  : canSubmit
+                    ? `합배송 주문 보내기 (${participants.length}명 · ${formatPrice(grandTotal)})`
+                    : "합배송 주문 보내기 (메뉴 등록 후 가능)"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {!open && (
           <p className="rounded-xl bg-cream-dark px-4 py-3 text-center text-sm text-ink-muted">
-            이 모임은 마감되어 더 이상 참여할 수 없어요.
+            {group.status === "submitted"
+              ? "어드민에 전달 완료 · 추가 등록 불가"
+              : "이 합배송은 종료되었습니다"}
           </p>
-        ) : !ready ? (
-          <p className="text-center text-sm text-ink-muted">장바구니 확인 중…</p>
-        ) : hasCart ? (
-          <>
-            <Link
-              href="/checkout"
-              onClick={goCheckout}
-              className="btn btn-primary flex w-full justify-between py-4 text-base"
-            >
-              <span>주문하기 ({totalCount}개)</span>
-              <span className="tabular-nums">{formatPrice(totalPrice)}</span>
-            </Link>
-            <Link
-              href="/"
-              onClick={joinAndShop}
-              className="btn btn-ghost flex w-full"
-            >
-              메뉴 더 담기
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link
-              href="/"
-              onClick={joinAndShop}
-              className="btn btn-primary flex w-full py-4"
-            >
-              메뉴 담으러 가기
-            </Link>
-            <p className="text-center text-xs leading-relaxed text-ink-muted">
-              메뉴를 담으면 이 화면과 하단에{" "}
-              <strong className="text-ink">주문하기</strong> 버튼이 나타납니다.
-            </p>
-          </>
         )}
       </div>
     </div>

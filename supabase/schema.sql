@@ -25,7 +25,7 @@ create table if not exists public.delivery_groups (
   host_name text not null,
   host_phone text,
   status text not null default 'open'
-    check (status in ('open', 'closed', 'done', 'cancelled')),
+    check (status in ('open', 'closed', 'submitted', 'done', 'cancelled')),
   created_at timestamptz not null default now()
 );
 
@@ -45,7 +45,7 @@ create table if not exists public.orders (
   want_cash_receipt boolean not null default false,
   cash_receipt_phone text,
   status text not null default 'pending'
-    check (status in ('pending', 'done', 'cancelled')),
+    check (status in ('draft', 'pending', 'done', 'cancelled')),
   delivery_group_id uuid references public.delivery_groups (id) on delete set null,
   created_at timestamptz not null default now()
 );

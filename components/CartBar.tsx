@@ -33,7 +33,7 @@ export function CartBar() {
               {totalCount}
             </span>
             <span>
-              {groupCode ? "합배송 주문하기" : "주문하기"}
+              {groupCode ? "내 메뉴 등록" : "주문하기"}
             </span>
           </span>
           <span className="tabular-nums">{formatPrice(totalPrice)}</span>

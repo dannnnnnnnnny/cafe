@@ -17,8 +17,8 @@ export function GroupBanner() {
           </p>
           <p className="mt-1 text-xs text-ink-muted">
             {totalCount > 0
-              ? "아래 버튼 또는 하단 바로 주문을 완료하세요."
-              : "메뉴를 담은 뒤, 하단 「합배송 주문하기」를 누르세요."}
+              ? "아래 「내 메뉴 등록」으로 목록에 올리면 돼요. (아직 매장 미전달)"
+              : "메뉴를 담은 뒤 「내 메뉴 등록」하세요. 매장 전송은 주최자가 합니다."}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -42,7 +42,7 @@ export function GroupBanner() {
           href="/checkout"
           className="btn btn-primary mt-3 flex w-full justify-between py-3 text-sm"
         >
-          <span>주문하기 ({totalCount}개)</span>
+          <span>내 메뉴 등록 ({totalCount}개)</span>
           <span className="tabular-nums">{formatPrice(totalPrice)}</span>
         </Link>
       )}

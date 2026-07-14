@@ -111,7 +111,8 @@ export async function POST(req: Request) {
         cash_receipt_phone: data.wantCashReceipt
           ? data.cashReceiptPhone
           : null,
-        status: "pending",
+        // 합배송 모집 중: draft (어드민 미접수). 개인 주문: pending
+        status: deliveryGroupId ? "draft" : "pending",
         delivery_group_id: deliveryGroupId,
       })
       .select("id, order_number")
@@ -142,17 +143,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: itemsErr.message }, { status: 500 });
     }
 
-    // TODO: notify admin
-    console.info(
-      "[order] new order",
-      order.order_number,
-      data.customerName,
-      deliveryGroupId ? `group=${data.groupCode}` : "solo",
-    );
+    // 개인 주문만 즉시 알림. 합배송은 호스트 전송 시 알림
+    if (!deliveryGroupId) {
+      // TODO: notify admin
+      console.info("[order] new solo order", order.order_number, data.customerName);
+    } else {
+      console.info(
+        "[order] group draft registered",
+        order.order_number,
+        data.customerName,
+        data.groupCode,
+      );
+    }
 
     return NextResponse.json({
       orderNumber: order.order_number,
       groupCode: data.groupCode?.trim().toUpperCase() || null,
+      isDraft: Boolean(deliveryGroupId),
     });
   }
 

@@ -81,15 +81,17 @@ export function CheckoutForm() {
       const data = (await res.json()) as {
         orderNumber?: string;
         groupCode?: string | null;
+        isDraft?: boolean;
         error?: string;
       };
       if (!res.ok) throw new Error(data.error || "주문에 실패했습니다");
       clear();
       const q = new URLSearchParams({ n: data.orderNumber! });
       if (data.groupCode) q.set("g", data.groupCode);
+      if (data.isDraft) q.set("draft", "1");
       router.push(`/done?${q.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "주문에 실패했습니다");
+      setError(err instanceof Error ? err.message : "등록에 실패했습니다");
     } finally {
       setLoading(false);
     }
@@ -329,13 +331,15 @@ export function CheckoutForm() {
         disabled={loading || (isGroup && groupLoading)}
       >
         {loading
-          ? "신청 중…"
+          ? "처리 중…"
           : isGroup
-            ? `${formatPrice(totalPrice)} 합배송 참여`
+            ? `${formatPrice(totalPrice)} 내 메뉴 등록`
             : `${formatPrice(totalPrice)} 구매 신청`}
       </button>
       <p className="pb-4 text-center text-xs text-ink-muted">
-        결제 없이 신청만 접수됩니다. 매장에서 확인해 드릴게요.
+        {isGroup
+          ? "지금은 합배송 목록에만 등록됩니다. 주최자가 「합배송 주문 보내기」를 눌러야 매장에 전달돼요."
+          : "결제 없이 신청만 접수됩니다. 매장에서 확인해 드릴게요."}
       </p>
     </form>
   );

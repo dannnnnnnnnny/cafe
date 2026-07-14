@@ -9,9 +9,11 @@ export type Menu = {
   sort_order: number;
 };
 
-export type OrderStatus = "pending" | "done" | "cancelled";
+/** draft = 합배송 모집 중 등록(어드민 미접수), pending = 접수됨 */
+export type OrderStatus = "draft" | "pending" | "done" | "cancelled";
 export type FulfillmentType = "pickup" | "delivery";
-export type GroupStatus = "open" | "closed" | "done" | "cancelled";
+/** open = 메뉴 모집, submitted = 어드민 전송 완료 */
+export type GroupStatus = "open" | "closed" | "submitted" | "done" | "cancelled";
 
 export type OrderItem = {
   id: string;

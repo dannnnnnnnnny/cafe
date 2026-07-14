@@ -14,6 +14,7 @@ import type {
 const STATUS_KO: Record<GroupStatus, string> = {
   open: "모집 중",
   closed: "마감",
+  submitted: "주문 접수",
   done: "완료",
   cancelled: "취소",
 };
@@ -21,6 +22,7 @@ const STATUS_KO: Record<GroupStatus, string> = {
 const badgeClass: Record<GroupStatus, string> = {
   open: "badge-pending",
   closed: "badge-pending",
+  submitted: "badge-pending",
   done: "badge-done",
   cancelled: "badge-cancelled",
 };
@@ -28,7 +30,9 @@ const badgeClass: Record<GroupStatus, string> = {
 export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
   const router = useRouter();
   const [groups, setGroups] = useState(initial);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(
+    initial.find((g) => g.status === "submitted")?.id ?? null,
+  );
   const [busy, setBusy] = useState<string | null>(null);
 
   async function setStatus(id: string, status: GroupStatus) {
@@ -44,14 +48,14 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
       return;
     }
 
-    // 완료/취소 시 소속 pending 주문 일괄 동기화
     if (status === "done" || status === "cancelled") {
-      const orderStatus = status === "done" ? "done" : "cancelled";
+      const orderStatus: OrderStatus =
+        status === "done" ? "done" : "cancelled";
       await supabase
         .from("orders")
         .update({ status: orderStatus })
         .eq("delivery_group_id", id)
-        .eq("status", "pending");
+        .in("status", ["pending", "draft"]);
     }
 
     setBusy(null);
@@ -63,7 +67,9 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
           const orderStatus: OrderStatus =
             status === "done" ? "done" : "cancelled";
           orders = g.orders?.map((o) =>
-            o.status === "pending" ? { ...o, status: orderStatus } : o,
+            o.status === "pending" || o.status === "draft"
+              ? { ...o, status: orderStatus }
+              : o,
           );
         }
         return { ...g, status, orders };
@@ -81,9 +87,16 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
     );
   }
 
+  // 접수된 주문 먼저
+  const sorted = [...groups].sort((a, b) => {
+    const rank = (s: GroupStatus) =>
+      s === "submitted" ? 0 : s === "open" ? 1 : 2;
+    return rank(a.status) - rank(b.status);
+  });
+
   return (
     <ul className="space-y-3">
-      {groups.map((g) => {
+      {sorted.map((g) => {
         const orders = (g.orders ?? []) as Order[];
         const total = orders.reduce(
           (s, o) =>
@@ -95,9 +108,16 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
           0,
         );
         const expanded = openId === g.id;
+        const isCollecting = g.status === "open" || g.status === "closed";
+        const isActionable = g.status === "submitted";
 
         return (
-          <li key={g.id} className="card p-4 space-y-3">
+          <li
+            key={g.id}
+            className={`card p-4 space-y-3 ${
+              isCollecting ? "opacity-80" : ""
+            }`}
+          >
             <button
               type="button"
               className="flex w-full items-start justify-between gap-2 text-left"
@@ -108,11 +128,18 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                 <p className="text-sm text-ink-muted">
                   #{g.code} · {orders.length}명 · {formatWhen(g.preferred_at)}
                 </p>
-                <p className="mt-1 text-sm text-ink-muted">📍 {g.delivery_address}</p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  📍 {g.delivery_address}
+                </p>
+                {isCollecting && (
+                  <p className="mt-1 text-xs font-semibold text-ink-muted">
+                    아직 어드민 미전송 · 처리하지 마세요
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className={`badge ${badgeClass[g.status]}`}>
-                  {STATUS_KO[g.status]}
+                  {STATUS_KO[g.status] ?? g.status}
                 </span>
                 <span className="text-sm font-bold text-coffee">
                   {formatPrice(total)}
@@ -130,7 +157,7 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                   {g.host_phone ? ` · ${g.host_phone}` : ""}
                 </p>
                 {orders.length === 0 ? (
-                  <p className="text-sm text-ink-muted">아직 참가 주문 없음</p>
+                  <p className="text-sm text-ink-muted">아직 등록 없음</p>
                 ) : (
                   <ul className="space-y-2">
                     {orders.map((o) => {
@@ -149,6 +176,7 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                               {o.customer_name}{" "}
                               <span className="font-normal text-ink-muted">
                                 · {o.customer_phone} · #{o.order_number}
+                                {o.status === "draft" ? " · 모집중" : ""}
                               </span>
                             </span>
                             <span className="text-coffee">{formatPrice(sub)}</span>
@@ -160,50 +188,37 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                               </li>
                             ))}
                           </ul>
-                          <p className="mt-1 text-xs text-ink-muted">
-                            {o.want_point_earn ? "포인트" : "포인트X"} ·{" "}
-                            {o.want_cash_receipt
-                              ? `영수증 ${o.cash_receipt_phone || ""}`
-                              : "영수증X"}
-                          </p>
                         </li>
                       );
                     })}
                   </ul>
                 )}
 
-                <div className="flex flex-wrap gap-2">
-                  {g.status === "open" && (
+                {isActionable && (
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="btn btn-ghost flex-1 text-sm py-2.5"
+                      className="btn btn-primary flex-1 text-sm py-2.5"
                       disabled={busy === g.id}
-                      onClick={() => setStatus(g.id, "closed")}
+                      onClick={() => setStatus(g.id, "done")}
                     >
-                      마감
+                      완료
                     </button>
-                  )}
-                  {(g.status === "open" || g.status === "closed") && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-primary flex-1 text-sm py-2.5"
-                        disabled={busy === g.id}
-                        onClick={() => setStatus(g.id, "done")}
-                      >
-                        완료
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger flex-1 text-sm py-2.5"
-                        disabled={busy === g.id}
-                        onClick={() => setStatus(g.id, "cancelled")}
-                      >
-                        취소
-                      </button>
-                    </>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      className="btn btn-danger flex-1 text-sm py-2.5"
+                      disabled={busy === g.id}
+                      onClick={() => setStatus(g.id, "cancelled")}
+                    >
+                      취소
+                    </button>
+                  </div>
+                )}
+                {isCollecting && (
+                  <p className="text-xs text-center text-ink-muted">
+                    주최자가 「합배송 주문 보내기」를 해야 처리할 수 있습니다.
+                  </p>
+                )}
               </div>
             )}
           </li>
