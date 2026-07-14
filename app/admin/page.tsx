@@ -45,10 +45,13 @@ export default async function AdminOrdersPage() {
 
   const allOrders = (ordersRes.data ?? []) as Order[];
   const soloOrders = allOrders.filter((o) => !o.delivery_group_id);
-  const groups = (groupsRes.data ?? []).map((g) => ({
-    ...(g as DeliveryGroup),
-    orders: allOrders.filter((o) => o.delivery_group_id === g.id),
-  }));
+  // 모집 중(open/closed) 합배송은 어드민에 미표시 — 전송(submitted) 이후만
+  const groups = (groupsRes.data ?? [])
+    .filter((g) => g.status !== "open" && g.status !== "closed")
+    .map((g) => ({
+      ...(g as DeliveryGroup),
+      orders: allOrders.filter((o) => o.delivery_group_id === g.id),
+    }));
 
   return <AdminOrders soloOrders={soloOrders} groups={groups} />;
 }

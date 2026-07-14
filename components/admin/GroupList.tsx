@@ -108,16 +108,10 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
           0,
         );
         const expanded = openId === g.id;
-        const isCollecting = g.status === "open" || g.status === "closed";
         const isActionable = g.status === "submitted";
 
         return (
-          <li
-            key={g.id}
-            className={`card p-4 space-y-3 ${
-              isCollecting ? "opacity-80" : ""
-            }`}
-          >
+          <li key={g.id} className="card space-y-3 p-4">
             <button
               type="button"
               className="flex w-full items-start justify-between gap-2 text-left"
@@ -131,11 +125,6 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                 <p className="mt-1 text-sm text-ink-muted">
                   📍 {g.delivery_address}
                 </p>
-                {isCollecting && (
-                  <p className="mt-1 text-xs font-semibold text-ink-muted">
-                    아직 어드민 미전송 · 처리하지 마세요
-                  </p>
-                )}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className={`badge ${badgeClass[g.status]}`}>
@@ -213,11 +202,6 @@ export function GroupList({ groups: initial }: { groups: DeliveryGroup[] }) {
                       취소
                     </button>
                   </div>
-                )}
-                {isCollecting && (
-                  <p className="text-xs text-center text-ink-muted">
-                    주최자가 「합배송 주문 보내기」를 해야 처리할 수 있습니다.
-                  </p>
                 )}
               </div>
             )}
