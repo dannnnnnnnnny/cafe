@@ -24,7 +24,8 @@ const STATUS_KO: Record<GroupStatus, string> = {
 export default function GroupPage() {
   const params = useParams<{ code: string }>();
   const code = String(params.code || "").toUpperCase();
-  const { setGroupCode } = useCart();
+  const { setGroupCode, totalCount, totalPrice, groupCode: cartGroup } =
+    useCart();
   const [group, setGroup] = useState<DeliveryGroup | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -171,15 +172,34 @@ export default function GroupPage() {
         )}
       </section>
 
-      <div className="mt-6 space-y-3">
-        {open ? (
-          <Link
-            href="/"
-            onClick={join}
-            className="btn btn-primary flex w-full py-4"
-          >
-            메뉴 담고 참여하기
-          </Link>
+      <div className="mt-6 space-y-3 pb-8">
+        {open && totalCount > 0 && cartGroup === code ? (
+          <>
+            <Link href="/checkout" className="btn btn-primary flex w-full justify-between py-4">
+              <span>주문하기 ({totalCount}개)</span>
+              <span className="tabular-nums">{formatPrice(totalPrice)}</span>
+            </Link>
+            <Link
+              href="/"
+              onClick={join}
+              className="btn btn-ghost flex w-full"
+            >
+              메뉴 더 담기
+            </Link>
+          </>
+        ) : open ? (
+          <>
+            <Link
+              href="/"
+              onClick={join}
+              className="btn btn-primary flex w-full py-4"
+            >
+              메뉴 담고 참여하기
+            </Link>
+            <p className="text-center text-xs text-ink-muted">
+              메뉴를 담은 뒤 하단 또는 이 화면의 「주문하기」로 신청합니다.
+            </p>
+          </>
         ) : (
           <p className="rounded-xl bg-cream-dark px-4 py-3 text-center text-sm text-ink-muted">
             이 모임은 마감되어 더 이상 참여할 수 없어요.

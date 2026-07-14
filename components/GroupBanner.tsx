@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/lib/cart";
+import { formatPrice, useCart } from "@/lib/cart";
 
 export function GroupBanner() {
-  const { groupCode, setGroupCode } = useCart();
+  const { groupCode, setGroupCode, totalCount, totalPrice } = useCart();
   if (!groupCode) return null;
 
   return (
@@ -16,7 +16,9 @@ export function GroupBanner() {
             코드 <span className="tracking-widest">{groupCode}</span>
           </p>
           <p className="mt-1 text-xs text-ink-muted">
-            메뉴를 담고 체크아웃하면 이 배달에 합류해요.
+            {totalCount > 0
+              ? "아래 버튼 또는 하단 바로 주문을 완료하세요."
+              : "메뉴를 담은 뒤, 하단 「합배송 주문하기」를 누르세요."}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -35,6 +37,15 @@ export function GroupBanner() {
           </button>
         </div>
       </div>
+      {totalCount > 0 && (
+        <Link
+          href="/checkout"
+          className="btn btn-primary mt-3 flex w-full justify-between py-3 text-sm"
+        >
+          <span>주문하기 ({totalCount}개)</span>
+          <span className="tabular-nums">{formatPrice(totalPrice)}</span>
+        </Link>
+      )}
     </div>
   );
 }

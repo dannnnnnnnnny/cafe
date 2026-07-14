@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatPrice, useCart } from "@/lib/cart";
 
 export function CartBar() {
-  const { totalCount, totalPrice } = useCart();
+  const { totalCount, totalPrice, groupCode } = useCart();
   if (totalCount === 0) return null;
 
   return (
@@ -18,7 +18,9 @@ export function CartBar() {
             <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/20 px-2 text-sm">
               {totalCount}
             </span>
-            <span>장바구니 보기</span>
+            <span>
+              {groupCode ? "합배송 주문하기" : "장바구니 · 주문하기"}
+            </span>
           </span>
           <span className="tabular-nums">{formatPrice(totalPrice)}</span>
         </Link>
