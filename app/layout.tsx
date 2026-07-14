@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
-import { CartBar } from "@/components/CartBar";
+import { FloatingCart } from "@/components/FloatingCart";
 import { CartProvider } from "@/lib/cart";
 import "./globals.css";
 
@@ -25,7 +25,7 @@ export default function RootLayout({
       <body className="min-h-full font-sans text-ink">
         <CartProvider>
           {children}
-          <CartBar />
+          <FloatingCart />
         </CartProvider>
       </body>
     </html>
