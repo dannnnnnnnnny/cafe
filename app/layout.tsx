@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
+import { CartBar } from "@/components/CartBar";
 import { CartProvider } from "@/lib/cart";
 import "./globals.css";
 
@@ -22,7 +23,10 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${noto.variable} h-full antialiased`}>
       <body className="min-h-full font-sans text-ink">
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          {children}
+          <CartBar />
+        </CartProvider>
       </body>
     </html>
   );

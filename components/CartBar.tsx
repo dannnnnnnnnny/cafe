@@ -1,10 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { formatPrice, useCart } from "@/lib/cart";
 
 export function CartBar() {
+  const pathname = usePathname();
   const { totalCount, totalPrice, groupCode } = useCart();
+
+  // admin / 체크아웃 / 완료 화면에서는 숨김
+  if (
+    !pathname ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/done") ||
+    pathname.startsWith("/group/new")
+  ) {
+    return null;
+  }
+
   if (totalCount === 0) return null;
 
   return (
@@ -19,7 +33,7 @@ export function CartBar() {
               {totalCount}
             </span>
             <span>
-              {groupCode ? "합배송 주문하기" : "장바구니 · 주문하기"}
+              {groupCode ? "합배송 주문하기" : "주문하기"}
             </span>
           </span>
           <span className="tabular-nums">{formatPrice(totalPrice)}</span>

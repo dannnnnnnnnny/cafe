@@ -24,8 +24,7 @@ const STATUS_KO: Record<GroupStatus, string> = {
 export default function GroupPage() {
   const params = useParams<{ code: string }>();
   const code = String(params.code || "").toUpperCase();
-  const { setGroupCode, totalCount, totalPrice, groupCode: cartGroup } =
-    useCart();
+  const { ready, setGroupCode, totalCount, totalPrice } = useCart();
   const [group, setGroup] = useState<DeliveryGroup | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +45,13 @@ export default function GroupPage() {
     load();
   }, [load]);
 
+  // 모임 페이지 들어오면 합배송 코드 자동 연결 (모집 중일 때)
+  useEffect(() => {
+    if (group?.status === "open" && code) {
+      setGroupCode(code);
+    }
+  }, [group?.status, code, setGroupCode]);
+
   async function copyLink() {
     const url = `${window.location.origin}/group/${code}`;
     try {
@@ -57,7 +63,11 @@ export default function GroupPage() {
     }
   }
 
-  function join() {
+  function joinAndShop() {
+    setGroupCode(code);
+  }
+
+  function goCheckout() {
     setGroupCode(code);
   }
 
@@ -83,9 +93,10 @@ export default function GroupPage() {
 
   const open = group.status === "open";
   const grandTotal = participants.reduce((s, p) => s + p.total, 0);
+  const hasCart = totalCount > 0;
 
   return (
-    <div className="mx-auto min-h-full max-w-lg px-4 pb-10">
+    <div className="mx-auto min-h-full max-w-lg px-4 pb-28">
       <header className="flex items-center gap-3 pt-6 pb-5">
         <Link
           href="/"
@@ -172,42 +183,56 @@ export default function GroupPage() {
         )}
       </section>
 
-      <div className="mt-6 space-y-3 pb-8">
-        {open && totalCount > 0 && cartGroup === code ? (
+      {/* 내 장바구니 미리보기 */}
+      {open && hasCart && (
+        <section className="mt-4 rounded-2xl border-2 border-coffee/20 bg-foam p-4">
+          <p className="text-xs font-bold tracking-wide text-coffee">내 장바구니</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            {totalCount}개 · {formatPrice(totalPrice)} 담겨 있어요
+          </p>
+        </section>
+      )}
+
+      <div className="mt-6 space-y-3">
+        {!open ? (
+          <p className="rounded-xl bg-cream-dark px-4 py-3 text-center text-sm text-ink-muted">
+            이 모임은 마감되어 더 이상 참여할 수 없어요.
+          </p>
+        ) : !ready ? (
+          <p className="text-center text-sm text-ink-muted">장바구니 확인 중…</p>
+        ) : hasCart ? (
           <>
-            <Link href="/checkout" className="btn btn-primary flex w-full justify-between py-4">
+            <Link
+              href="/checkout"
+              onClick={goCheckout}
+              className="btn btn-primary flex w-full justify-between py-4 text-base"
+            >
               <span>주문하기 ({totalCount}개)</span>
               <span className="tabular-nums">{formatPrice(totalPrice)}</span>
             </Link>
             <Link
               href="/"
-              onClick={join}
+              onClick={joinAndShop}
               className="btn btn-ghost flex w-full"
             >
               메뉴 더 담기
             </Link>
           </>
-        ) : open ? (
+        ) : (
           <>
             <Link
               href="/"
-              onClick={join}
+              onClick={joinAndShop}
               className="btn btn-primary flex w-full py-4"
             >
-              메뉴 담고 참여하기
+              메뉴 담으러 가기
             </Link>
-            <p className="text-center text-xs text-ink-muted">
-              메뉴를 담은 뒤 하단 또는 이 화면의 「주문하기」로 신청합니다.
+            <p className="text-center text-xs leading-relaxed text-ink-muted">
+              메뉴를 담으면 이 화면과 하단에{" "}
+              <strong className="text-ink">주문하기</strong> 버튼이 나타납니다.
             </p>
           </>
-        ) : (
-          <p className="rounded-xl bg-cream-dark px-4 py-3 text-center text-sm text-ink-muted">
-            이 모임은 마감되어 더 이상 참여할 수 없어요.
-          </p>
         )}
-        <Link href="/" className="btn btn-ghost flex w-full">
-          메뉴만 보기
-        </Link>
       </div>
     </div>
   );

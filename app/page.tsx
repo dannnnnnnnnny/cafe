@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CartBar } from "@/components/CartBar";
 import { GroupBanner } from "@/components/GroupBanner";
 import { MenuGrid } from "@/components/MenuGrid";
 import { DEMO_MENUS } from "@/lib/demo-menus";
@@ -59,7 +58,6 @@ export default async function HomePage() {
 
       <GroupBanner />
       <MenuGrid menus={menus} />
-      <CartBar />
     </div>
   );
 }

@@ -15,6 +15,7 @@ const STORAGE_KEY = "cafe-cart-v1";
 const GROUP_KEY = "cafe-group-code";
 
 type CartContextValue = {
+  ready: boolean;
   items: CartItem[];
   groupCode: string | null;
   setGroupCode: (code: string | null) => void;
@@ -108,6 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const totalCount = items.reduce((s, i) => s + i.quantity, 0);
     const totalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
     return {
+      ready,
       items,
       groupCode,
       setGroupCode,
@@ -118,7 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalCount,
       totalPrice,
     };
-  }, [items, groupCode, setGroupCode, add, setQty, remove, clear]);
+  }, [ready, items, groupCode, setGroupCode, add, setQty, remove, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
