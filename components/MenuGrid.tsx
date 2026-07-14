@@ -32,16 +32,18 @@ export function MenuGrid({ menus }: { menus: Menu[] }) {
 
       {filtered.length === 0 ? (
         <div className="card px-6 py-16 text-center">
-          <p className="text-3xl mb-3">🍵</p>
+          <p className="mb-3 text-3xl">🍵</p>
           <p className="font-semibold text-ink">메뉴가 아직 없어요</p>
           <p className="mt-1 text-sm text-ink-muted">잠시 후 다시 확인해 주세요</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <ul className="flex flex-col gap-2.5">
           {filtered.map((m) => (
-            <MenuCard key={m.id} menu={m} />
+            <li key={m.id}>
+              <MenuCard menu={m} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
