@@ -142,12 +142,17 @@ create policy "menu_images_admin_write" on storage.objects
 -- ── seed ───────────────────────────────────────────────
 insert into public.menus (name, description, price, category, is_available, sort_order)
 select * from (values
-  ('아메리카노', '깊고 깔끔한 에스프레소', 4500, '커피', true, 1),
-  ('카페 라떼', '부드러운 우유 거품', 5000, '커피', true, 2),
-  ('바닐라 라떼', '달콤한 바닐라 시럽', 5500, '커피', true, 3),
-  ('말차 라떼', '진한 말차 + 우유', 5800, '논커피', true, 4),
-  ('자몽 에이드', '상큼한 자몽', 5500, '논커피', true, 5),
-  ('티라미수', '마스카포네 크림', 6500, '디저트', true, 6),
-  ('초코 쿠키', '갓 구운 쿠키', 3500, '디저트', false, 7)
+  ('말차다미아 휘낭시에', null::text, 2800, '디저트', true, 1),
+  ('소금초코 휘낭시에', null::text, 2800, '디저트', true, 2),
+  ('블루치즈 휘낭시에', null::text, 2800, '디저트', true, 3),
+  ('군고구마 휘낭시에', null::text, 2900, '디저트', true, 4),
+  ('휘낭시에 러스크', null::text, 3500, '디저트', true, 5),
+  ('레몬 마들렌', null::text, 2700, '디저트', true, 6),
+  ('코코넛 휘낭시에', null::text, 2900, '디저트', true, 7),
+  ('무화과 크림치즈 휘낭시에', null::text, 2800, '디저트', true, 8),
+  ('다크초코 시리얼 휘낭시에', null::text, 2900, '디저트', true, 9),
+  ('클래식 휘낭시에', null::text, 2500, '디저트', true, 10),
+  ('까눌레(바닐라)', null::text, 2500, '디저트', true, 11),
+  ('에그타르트', null::text, 3200, '디저트', true, 12)
 ) as v(name, description, price, category, is_available, sort_order)
 where not exists (select 1 from public.menus limit 1);
