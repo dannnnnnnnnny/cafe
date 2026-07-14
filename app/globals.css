@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #faf6f1;
+  --cream-dark: #f0e8df;
+  --ink: #2c2420;
+  --ink-muted: #7a6b62;
+  --coffee: #6b4423;
+  --coffee-deep: #4a2f18;
+  --latte: #c4a484;
+  --foam: #ffffff;
+  --success: #3d6b4f;
+  --danger: #a63d3d;
+  --ring: #6b442333;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-dark: var(--cream-dark);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-coffee: var(--coffee);
+  --color-coffee-deep: var(--coffee-deep);
+  --color-latte: var(--latte);
+  --color-foam: var(--foam);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-noto);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-noto), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Form controls */
+input[type="text"],
+input[type="tel"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="datetime-local"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--cream-dark);
+  background: var(--foam);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--latte);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin-bottom: 0.35rem;
+}
+
+/* Utility bits */
+.card {
+  background: var(--foam);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 2px rgb(44 36 32 / 4%), 0 8px 24px rgb(44 36 32 / 6%);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.25rem;
+  transition: transform 0.12s, background 0.15s, opacity 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--coffee);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--coffee-deep);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--coffee);
+  border: 1px solid var(--latte);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--cream-dark);
+}
+
+.btn-danger {
+  background: #f8e8e8;
+  color: var(--danger);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chip-idle {
+  background: var(--foam);
+  color: var(--ink-muted);
+  border-color: var(--cream-dark);
+}
+
+.chip-active {
+  background: var(--coffee);
+  color: white;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.badge-pending {
+  background: #f5e6c8;
+  color: #8a5a12;
+}
+
+.badge-done {
+  background: #dceee3;
+  color: var(--success);
+}
+
+.badge-cancelled {
+  background: #f0e0e0;
+  color: var(--danger);
+}
+
+/* Hide number input spinners lightly */
+input[type="number"]::-webkit-inner-spin-button {
+  opacity: 0.4;
+}
