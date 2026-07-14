@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { CartBar } from "@/components/CartBar";
+import { GroupBanner } from "@/components/GroupBanner";
 import { MenuGrid } from "@/components/MenuGrid";
 import { DEMO_MENUS } from "@/lib/demo-menus";
 import { createServerSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -38,8 +40,16 @@ export default async function HomePage() {
           오늘의 메뉴
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          원하는 메뉴를 담고, 방문 또는 배달로 신청해 주세요.
+          원하는 메뉴를 담고, 방문·배달 또는 회사 합배송으로 신청해 주세요.
         </p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/group/new" className="btn btn-primary text-sm py-2.5 px-4">
+            합배송 만들기
+          </Link>
+          <Link href="/checkout" className="btn btn-ghost text-sm py-2.5 px-4">
+            장바구니
+          </Link>
+        </div>
         {demo && (
           <p className="mt-3 rounded-xl bg-cream-dark/80 px-3 py-2 text-xs text-ink-muted">
             데모 메뉴입니다. Supabase를 연결하면 실제 메뉴가 표시됩니다.
@@ -47,6 +57,7 @@ export default async function HomePage() {
         )}
       </header>
 
+      <GroupBanner />
       <MenuGrid menus={menus} />
       <CartBar />
     </div>

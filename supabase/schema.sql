@@ -15,6 +15,23 @@ create table if not exists public.menus (
   created_at timestamptz not null default now()
 );
 
+-- ── delivery_groups (합배송) ────────────────────────────
+create table if not exists public.delivery_groups (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  company_name text not null,
+  delivery_address text not null,
+  preferred_at timestamptz not null,
+  host_name text not null,
+  host_phone text,
+  status text not null default 'open'
+    check (status in ('open', 'closed', 'done', 'cancelled')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists delivery_groups_status_idx on public.delivery_groups (status);
+create index if not exists delivery_groups_created_at_idx on public.delivery_groups (created_at desc);
+
 -- ── orders ─────────────────────────────────────────────
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -29,11 +46,13 @@ create table if not exists public.orders (
   cash_receipt_phone text,
   status text not null default 'pending'
     check (status in ('pending', 'done', 'cancelled')),
+  delivery_group_id uuid references public.delivery_groups (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
 create index if not exists orders_created_at_idx on public.orders (created_at desc);
 create index if not exists orders_status_idx on public.orders (status);
+create index if not exists orders_delivery_group_id_idx on public.orders (delivery_group_id);
 
 -- ── order_items ────────────────────────────────────────
 create table if not exists public.order_items (
@@ -54,6 +73,7 @@ on conflict (id) do nothing;
 alter table public.menus enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.delivery_groups enable row level security;
 
 -- menus: public read
 drop policy if exists "menus_public_read" on public.menus;
@@ -92,6 +112,21 @@ drop policy if exists "order_items_admin_select" on public.order_items;
 create policy "order_items_admin_select" on public.order_items
   for select to authenticated
   using (true);
+
+-- delivery_groups
+drop policy if exists "groups_public_read" on public.delivery_groups;
+create policy "groups_public_read" on public.delivery_groups
+  for select using (true);
+
+drop policy if exists "groups_public_insert" on public.delivery_groups;
+create policy "groups_public_insert" on public.delivery_groups
+  for insert to anon, authenticated
+  with check (true);
+
+drop policy if exists "groups_admin_update" on public.delivery_groups;
+create policy "groups_admin_update" on public.delivery_groups
+  for update to authenticated
+  using (true) with check (true);
 
 -- storage policies for menu images
 drop policy if exists "menu_images_public_read" on storage.objects;

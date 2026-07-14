@@ -1,38 +1,45 @@
-# 카페 메뉴 · 주문 예약
+# 카페 메뉴 · 주문 예약 · 합배송
 
-손님용 메뉴/장바구니/구매 신청 + 관리자 메뉴·주문 관리.  
-**Next.js + Supabase + Vercel** 무료 티어로 동작합니다.
+손님용 메뉴/장바구니/구매 신청 + **회사 합배송** + 관리자 메뉴·주문 관리.  
+**Next.js + Supabase + Vercel** 무료 티어.
 
 ## 기능
 
 | 화면 | 내용 |
 |------|------|
-| `/` | 메뉴 조회, 장바구니 담기 |
-| `/checkout` | 방문/배달, 희망 시간, 이름·연락처, 포인트·현금영수증 |
+| `/` | 메뉴 조회, 장바구니, 합배송 만들기 |
+| `/checkout` | 개인 방문/배달 신청 |
+| `/group/new` | 합배송 모임 생성 (회사·주소·시간 고정) |
+| `/group/[code]` | 초대 링크·참가자 현황 |
 | `/done` | 신청 완료 · 주문 번호 |
-| `/admin` | 주문 목록 · 완료/취소 |
-| `/admin/menus` | 메뉴 CRUD · 이미지 · 품절 |
+| `/admin` | 합배송 / 개인 주문 탭 |
+| `/admin/menus` | 메뉴 CRUD |
 
-- 손님 로그인 없음
-- 관리자만 Supabase Auth 이메일 로그인
+### 합배송이란?
+
+같은 회사 동료가 **각자 장바구니·구매자 정보**로 주문하되, **배달 주소·희망 시간은 한 건**으로 묶는 방식입니다.
+
+1. 호스트가 모임 생성 → 링크/코드 공유  
+2. 동료가 링크로 들어와 메뉴 담기 → 본인 정보로 참여  
+3. Admin은 모임 단위로 배달 처리, 펼치면 구매자별 내역  
+
+- 손님 로그인 없음  
+- 관리자만 Supabase Auth  
 - 온라인 결제(PG) 없음 (신청만)
-- 알림: 주문 생성 시 서버 로그 + `// TODO: notify admin` (추후 연동)
 
 ## 빠른 시작
 
 ### 1. Supabase
 
-1. [supabase.com](https://supabase.com) 프로젝트 생성 (Free)
-2. SQL Editor에서 `supabase/schema.sql` 전체 실행
-3. Authentication → Users → 관리자 계정 1개 생성
-4. Settings → API 에서 URL / anon key / service_role key 복사
+1. 프로젝트 생성 (Free)  
+2. SQL Editor에서 `supabase/schema.sql` 실행 (또는 마이그레이션 순차 적용)  
+3. Auth Users에 관리자 1명 생성  
+4. API 키를 `.env.local`에 설정  
 
 ### 2. 로컬
 
 ```bash
 cp .env.example .env.local
-# .env.local 값 채우기
-
 npm install
 npm run dev
 ```
@@ -40,13 +47,10 @@ npm run dev
 - 손님: http://localhost:3000  
 - 관리자: http://localhost:3000/admin/login  
 
-`.env.local` 없이 실행하면 **데모 메뉴**만 보입니다 (주문 신청은 Supabase 필요).
+### 3. 배포
 
-### 3. Vercel 배포 (무료 서브도메인)
-
-1. GitHub에 푸시 후 Vercel Import
-2. Environment Variables에 `.env.local`과 동일 키 등록
-3. `https://프로젝트명.vercel.app` 로 접속
+GitHub `master` 푸시 → Vercel 자동 배포  
+https://cafe-menu-five-virid.vercel.app
 
 ## 환경 변수
 
@@ -54,14 +58,8 @@ npm run dev
 |------|------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 브라우저/서버 anon |
-| `SUPABASE_SERVICE_ROLE_KEY` | 주문 API 서버 쓰기 (권장) |
+| `SUPABASE_SERVICE_ROLE_KEY` | 주문·모임 API 서버 쓰기 |
 
 ## 스택
 
-- Next.js (App Router) · TypeScript · Tailwind CSS v4
-- Supabase (Postgres + Auth + Storage)
-- Vercel serverless
-
-## 개인정보
-
-주문에 이름·연락처가 저장됩니다. 관리자만 조회하며, 운영 시 보관 기간을 정하세요.
+Next.js App Router · TypeScript · Tailwind · Supabase · Vercel

@@ -31,14 +31,46 @@ export async function POST(req: Request) {
   }
 
   const data = parsed.data;
-  const preferred = new Date(data.preferredAt);
+  const supabase = createServiceSupabase();
+
+  let deliveryGroupId: string | null = null;
+  let fulfillmentType = data.fulfillmentType;
+  let preferredAt = data.preferredAt;
+  let deliveryAddress = data.deliveryAddress;
+
+  if (data.groupCode?.trim()) {
+    const code = data.groupCode.trim().toUpperCase();
+    const { data: group, error: gErr } = await supabase
+      .from("delivery_groups")
+      .select("id, status, delivery_address, preferred_at")
+      .eq("code", code)
+      .maybeSingle();
+
+    if (gErr) {
+      return NextResponse.json({ error: gErr.message }, { status: 500 });
+    }
+    if (!group) {
+      return NextResponse.json({ error: "합배송 모임을 찾을 수 없습니다" }, { status: 404 });
+    }
+    if (group.status !== "open") {
+      return NextResponse.json(
+        { error: "마감된 합배송 모임입니다. 더 이상 참여할 수 없어요." },
+        { status: 400 },
+      );
+    }
+
+    deliveryGroupId = group.id as string;
+    fulfillmentType = "delivery";
+    preferredAt = group.preferred_at as string;
+    deliveryAddress = group.delivery_address as string;
+  }
+
+  const preferred = new Date(preferredAt);
   if (Number.isNaN(preferred.getTime())) {
     return NextResponse.json({ error: "희망 시간이 올바르지 않습니다" }, { status: 400 });
   }
 
-  const supabase = createServiceSupabase();
   const menuIds = data.items.map((i) => i.menuId);
-
   const { data: menus, error: menuErr } = await supabase
     .from("menus")
     .select("id, name, price, is_available")
@@ -70,16 +102,17 @@ export async function POST(req: Request) {
         order_number: number,
         customer_name: data.customerName,
         customer_phone: data.customerPhone,
-        fulfillment_type: data.fulfillmentType,
+        fulfillment_type: fulfillmentType,
         preferred_at: preferred.toISOString(),
         delivery_address:
-          data.fulfillmentType === "delivery" ? data.deliveryAddress : null,
+          fulfillmentType === "delivery" ? deliveryAddress || null : null,
         want_point_earn: data.wantPointEarn,
         want_cash_receipt: data.wantCashReceipt,
         cash_receipt_phone: data.wantCashReceipt
           ? data.cashReceiptPhone
           : null,
         status: "pending",
+        delivery_group_id: deliveryGroupId,
       })
       .select("id, order_number")
       .single();
@@ -109,10 +142,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: itemsErr.message }, { status: 500 });
     }
 
-    // TODO: notify admin (Telegram / Discord / Email)
-    console.info("[order] new order", order.order_number, data.customerName);
+    // TODO: notify admin
+    console.info(
+      "[order] new order",
+      order.order_number,
+      data.customerName,
+      deliveryGroupId ? `group=${data.groupCode}` : "solo",
+    );
 
-    return NextResponse.json({ orderNumber: order.order_number });
+    return NextResponse.json({
+      orderNumber: order.order_number,
+      groupCode: data.groupCode?.trim().toUpperCase() || null,
+    });
   }
 
   return NextResponse.json({ error: "주문 번호 생성에 실패했습니다" }, { status: 500 });

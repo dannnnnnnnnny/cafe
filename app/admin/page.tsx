@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { OrderList } from "@/components/admin/OrderList";
+import { AdminOrders } from "@/components/admin/AdminOrders";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { createSessionSupabase } from "@/lib/supabase-server";
-import type { Order } from "@/lib/types";
+import type { DeliveryGroup, Order } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,34 +15,40 @@ export default async function AdminOrdersPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/admin/login");
 
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, order_items(*)")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [ordersRes, groupsRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("*, order_items(*)")
+      .order("created_at", { ascending: false })
+      .limit(80),
+    supabase
+      .from("delivery_groups")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
 
-  if (error) {
+  if (ordersRes.error) {
     return (
       <div className="card p-6 text-sm text-danger">
-        주문을 불러오지 못했습니다: {error.message}
+        주문을 불러오지 못했습니다: {ordersRes.error.message}
+      </div>
+    );
+  }
+  if (groupsRes.error) {
+    return (
+      <div className="card p-6 text-sm text-danger">
+        합배송을 불러오지 못했습니다: {groupsRes.error.message}
       </div>
     );
   }
 
-  const orders = (data ?? []) as Order[];
-  const pending = orders.filter((o) => o.status === "pending").length;
+  const allOrders = (ordersRes.data ?? []) as Order[];
+  const soloOrders = allOrders.filter((o) => !o.delivery_group_id);
+  const groups = (groupsRes.data ?? []).map((g) => ({
+    ...(g as DeliveryGroup),
+    orders: allOrders.filter((o) => o.delivery_group_id === g.id),
+  }));
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-xl font-bold">주문</h2>
-          <p className="text-sm text-ink-muted">
-            대기 {pending}건 · 최근 50건
-          </p>
-        </div>
-      </div>
-      <OrderList orders={orders} />
-    </div>
-  );
+  return <AdminOrders soloOrders={soloOrders} groups={groups} />;
 }

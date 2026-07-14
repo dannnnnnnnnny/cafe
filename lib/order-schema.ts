@@ -13,6 +13,7 @@ export const orderSchema = z
     wantPointEarn: z.boolean(),
     wantCashReceipt: z.boolean(),
     cashReceiptPhone: z.string().trim().optional().default(""),
+    groupCode: z.string().trim().optional(),
     items: z
       .array(
         z.object({
@@ -23,7 +24,8 @@ export const orderSchema = z
       .min(1, "장바구니가 비어 있습니다"),
   })
   .superRefine((data, ctx) => {
-    if (data.fulfillmentType === "delivery" && !data.deliveryAddress?.trim()) {
+    const isGroup = Boolean(data.groupCode?.trim());
+    if (!isGroup && data.fulfillmentType === "delivery" && !data.deliveryAddress?.trim()) {
       ctx.addIssue({
         code: "custom",
         path: ["deliveryAddress"],
@@ -39,4 +41,21 @@ export const orderSchema = z
     }
   });
 
+export const groupCreateSchema = z.object({
+  companyName: z.string().trim().min(1, "회사명을 입력해 주세요").max(80),
+  deliveryAddress: z.string().trim().min(1, "배달 주소를 입력해 주세요").max(200),
+  preferredAt: z.string().min(1, "희망 시간을 선택해 주세요"),
+  hostName: z.string().trim().min(1, "이름을 입력해 주세요").max(40),
+  hostPhone: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .refine(
+      (v) => !v || /^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(v),
+      "연락처 형식을 확인해 주세요",
+    ),
+});
+
 export type OrderInput = z.infer<typeof orderSchema>;
+export type GroupCreateInput = z.infer<typeof groupCreateSchema>;

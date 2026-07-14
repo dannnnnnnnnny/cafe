@@ -1,18 +1,53 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { formatPrice, useCart } from "@/lib/cart";
-import type { FulfillmentType } from "@/lib/types";
+import { useEffect, useState, type FormEvent } from "react";
+import { formatPrice, formatWhen, useCart } from "@/lib/cart";
+import type { DeliveryGroup, FulfillmentType } from "@/lib/types";
 
 export function CheckoutForm() {
   const router = useRouter();
-  const { items, totalPrice, setQty, remove, clear } = useCart();
+  const { items, totalPrice, setQty, remove, clear, groupCode, setGroupCode } =
+    useCart();
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("pickup");
   const [wantPoint, setWantPoint] = useState(false);
   const [wantReceipt, setWantReceipt] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [group, setGroup] = useState<DeliveryGroup | null>(null);
+  const [groupLoading, setGroupLoading] = useState(Boolean(groupCode));
+
+  useEffect(() => {
+    if (!groupCode) {
+      setGroup(null);
+      setGroupLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setGroupLoading(true);
+    fetch(`/api/groups/${groupCode}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "모임을 불러오지 못했습니다");
+        if (!cancelled) {
+          setGroup(data.group as DeliveryGroup);
+          setFulfillment("delivery");
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setError(err.message);
+          setGroup(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setGroupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupCode]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,12 +58,17 @@ export function CheckoutForm() {
     const body = {
       customerName: String(fd.get("customerName") || ""),
       customerPhone: String(fd.get("customerPhone") || ""),
-      fulfillmentType: fulfillment,
-      preferredAt: String(fd.get("preferredAt") || ""),
-      deliveryAddress: String(fd.get("deliveryAddress") || ""),
+      fulfillmentType: group ? "delivery" : fulfillment,
+      preferredAt: group
+        ? group.preferred_at
+        : String(fd.get("preferredAt") || ""),
+      deliveryAddress: group
+        ? group.delivery_address
+        : String(fd.get("deliveryAddress") || ""),
       wantPointEarn: wantPoint,
       wantCashReceipt: wantReceipt,
       cashReceiptPhone: String(fd.get("cashReceiptPhone") || ""),
+      groupCode: groupCode || undefined,
       items: items.map((i) => ({ menuId: i.menuId, quantity: i.quantity })),
     };
 
@@ -38,10 +78,16 @@ export function CheckoutForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { orderNumber?: string; error?: string };
+      const data = (await res.json()) as {
+        orderNumber?: string;
+        groupCode?: string | null;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error || "주문에 실패했습니다");
       clear();
-      router.push(`/done?n=${encodeURIComponent(data.orderNumber!)}`);
+      const q = new URLSearchParams({ n: data.orderNumber! });
+      if (data.groupCode) q.set("g", data.groupCode);
+      router.push(`/done?${q.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "주문에 실패했습니다");
     } finally {
@@ -54,23 +100,56 @@ export function CheckoutForm() {
       <div className="card px-6 py-16 text-center">
         <p className="text-3xl mb-3">🛒</p>
         <p className="font-semibold">장바구니가 비어 있어요</p>
-        <a href="/" className="btn btn-primary mt-6 inline-flex">
+        <Link href="/" className="btn btn-primary mt-6 inline-flex">
           메뉴 보러 가기
-        </a>
+        </Link>
       </div>
     );
   }
 
-  // default preferred: ~30 min from now, local datetime-local format
   const defaultPreferred = (() => {
     const d = new Date(Date.now() + 30 * 60 * 1000);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 16);
   })();
 
+  const isGroup = Boolean(groupCode);
+
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      {/* cart summary */}
+      {isGroup && (
+        <section className="card border border-latte/40 p-4">
+          {groupLoading ? (
+            <p className="text-sm text-ink-muted">합배송 정보 불러오는 중…</p>
+          ) : group ? (
+            <div className="space-y-1 text-sm">
+              <p className="text-xs font-bold tracking-wide text-coffee">
+                합배송 참여
+              </p>
+              <p className="text-lg font-bold">{group.company_name}</p>
+              <p className="text-ink-muted">📍 {group.delivery_address}</p>
+              <p className="text-ink-muted">
+                희망 {formatWhen(group.preferred_at)} · 코드 {group.code}
+              </p>
+              {group.status !== "open" && (
+                <p className="mt-2 text-danger font-semibold">
+                  이 모임은 마감되어 주문이 거절될 수 있어요.
+                </p>
+              )}
+              <button
+                type="button"
+                className="mt-2 text-xs text-ink-muted underline"
+                onClick={() => setGroupCode(null)}
+              >
+                개인 주문으로 전환
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-danger">합배송 모임을 불러오지 못했습니다.</p>
+          )}
+        </section>
+      )}
+
       <section className="card p-4 space-y-3">
         <h2 className="text-sm font-bold text-ink-muted uppercase tracking-wide">
           주문 내역
@@ -80,9 +159,7 @@ export function CheckoutForm() {
             <li key={item.menuId} className="flex items-center gap-3 py-3">
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{item.name}</p>
-                <p className="text-sm text-ink-muted">
-                  {formatPrice(item.price)}
-                </p>
+                <p className="text-sm text-ink-muted">{formatPrice(item.price)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -121,14 +198,19 @@ export function CheckoutForm() {
         </div>
       </section>
 
-      {/* customer */}
       <section className="card p-4 space-y-4">
         <h2 className="text-sm font-bold text-ink-muted uppercase tracking-wide">
           신청 정보
         </h2>
         <div>
           <label htmlFor="customerName">이름</label>
-          <input id="customerName" name="customerName" required maxLength={40} placeholder="홍길동" />
+          <input
+            id="customerName"
+            name="customerName"
+            required
+            maxLength={40}
+            placeholder="홍길동"
+          />
         </div>
         <div>
           <label htmlFor="customerPhone">연락처</label>
@@ -141,58 +223,69 @@ export function CheckoutForm() {
           />
         </div>
 
-        <div>
-          <span className="block text-sm font-semibold text-ink-muted mb-2">
-            수령 방식
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                ["pickup", "직접 방문"],
-                ["delivery", "배달"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
-                  fulfillment === value
-                    ? "border-coffee bg-coffee text-white"
-                    : "border-cream-dark bg-foam text-ink-muted"
-                }`}
-                onClick={() => setFulfillment(value)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {!isGroup && (
+          <>
+            <div>
+              <span className="mb-2 block text-sm font-semibold text-ink-muted">
+                수령 방식
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["pickup", "직접 방문"],
+                    ["delivery", "배달"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                      fulfillment === value
+                        ? "border-coffee bg-coffee text-white"
+                        : "border-cream-dark bg-foam text-ink-muted"
+                    }`}
+                    onClick={() => setFulfillment(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {fulfillment === "delivery" && (
-          <div>
-            <label htmlFor="deliveryAddress">배달 주소</label>
-            <input
-              id="deliveryAddress"
-              name="deliveryAddress"
-              required
-              placeholder="시/구/동 상세주소"
-            />
-          </div>
+            {fulfillment === "delivery" && (
+              <div>
+                <label htmlFor="deliveryAddress">배달 주소</label>
+                <input
+                  id="deliveryAddress"
+                  name="deliveryAddress"
+                  required
+                  placeholder="시/구/동 상세주소"
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="preferredAt">희망 시간</label>
+              <input
+                id="preferredAt"
+                name="preferredAt"
+                type="datetime-local"
+                required
+                defaultValue={defaultPreferred}
+              />
+            </div>
+
+            <Link
+              href="/group/new"
+              className="block rounded-xl border border-dashed border-latte px-3 py-3 text-center text-sm font-semibold text-coffee"
+            >
+              회사 동료와 합배송 할까요? → 모임 만들기
+            </Link>
+          </>
         )}
 
-        <div>
-          <label htmlFor="preferredAt">희망 시간</label>
-          <input
-            id="preferredAt"
-            name="preferredAt"
-            type="datetime-local"
-            required
-            defaultValue={defaultPreferred}
-          />
-        </div>
-
         <div className="space-y-3 rounded-xl bg-cream px-3 py-3">
-          <label className="flex items-center gap-3 cursor-pointer !mb-0">
+          <label className="flex cursor-pointer items-center gap-3 !mb-0">
             <input
               type="checkbox"
               className="h-4 w-4 accent-coffee"
@@ -201,7 +294,7 @@ export function CheckoutForm() {
             />
             <span className="text-sm font-semibold text-ink">포인트 적립</span>
           </label>
-          <label className="flex items-center gap-3 cursor-pointer !mb-0">
+          <label className="flex cursor-pointer items-center gap-3 !mb-0">
             <input
               type="checkbox"
               className="h-4 w-4 accent-coffee"
@@ -230,10 +323,18 @@ export function CheckoutForm() {
         </p>
       )}
 
-      <button type="submit" className="btn btn-primary w-full py-4" disabled={loading}>
-        {loading ? "신청 중…" : `${formatPrice(totalPrice)} 구매 신청`}
+      <button
+        type="submit"
+        className="btn btn-primary w-full py-4"
+        disabled={loading || (isGroup && groupLoading)}
+      >
+        {loading
+          ? "신청 중…"
+          : isGroup
+            ? `${formatPrice(totalPrice)} 합배송 참여`
+            : `${formatPrice(totalPrice)} 구매 신청`}
       </button>
-      <p className="text-center text-xs text-ink-muted pb-4">
+      <p className="pb-4 text-center text-xs text-ink-muted">
         결제 없이 신청만 접수됩니다. 매장에서 확인해 드릴게요.
       </p>
     </form>
